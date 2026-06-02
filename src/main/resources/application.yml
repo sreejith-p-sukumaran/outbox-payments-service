@@ -1,0 +1,52 @@
+spring:
+  application:
+    name: outbox-payments-service
+
+  datasource:
+    url: ${DATABASE_URL:jdbc:mysql://localhost:3306/payments}
+    username: ${DATABASE_USER:payments}
+    password: ${DATABASE_PASSWORD:payments}
+
+  jpa:
+    # Flyway owns the schema; Hibernate only validates that entities match it.
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+    properties:
+      hibernate:
+        format_sql: true
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+      # At-least-once on the broker side: wait for all in-sync replicas, retry
+      # transient failures. The relay still re-publishes anything not marked SENT.
+      acks: all
+      retries: 10
+      properties:
+        enable.idempotence: true
+
+server:
+  port: ${SERVER_PORT:8080}
+
+outbox:
+  topic: payment-events
+  relay:
+    # How often the relay polls for PENDING rows, and how many it drains per run.
+    poll-interval: ${OUTBOX_RELAY_POLL_INTERVAL:2s}
+    batch-size: ${OUTBOX_RELAY_BATCH_SIZE:100}
+  cleanup:
+    # How long SENT rows are retained before the sweep deletes them, and how
+    # often that sweep runs.
+    retention: ${OUTBOX_CLEANUP_RETENTION:7d}
+    interval: ${OUTBOX_CLEANUP_INTERVAL:1h}
+
+logging:
+  level:
+    org.flywaydb: info
