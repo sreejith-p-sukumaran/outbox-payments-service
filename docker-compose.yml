@@ -1,6 +1,23 @@
-# Local Kafka (KRaft — no ZooKeeper) plus a web UI for inspecting topics.
-# MySQL is added in a later phase, once the schema and JPA layer need it.
+# Local Kafka (KRaft — no ZooKeeper) plus a web UI for inspecting topics,
+# and the MySQL instance that owns the payment + outbox tables.
 services:
+  mysql:
+    image: mysql:8.4
+    container_name: outbox-mysql
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_DATABASE: payments
+      MYSQL_USER: payments
+      MYSQL_PASSWORD: payments
+      MYSQL_ROOT_PASSWORD: root
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-proot"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+
   kafka:
     image: confluentinc/cp-kafka:7.7.1
     container_name: outbox-kafka
