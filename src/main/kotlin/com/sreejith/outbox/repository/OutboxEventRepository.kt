@@ -38,4 +38,19 @@ interface OutboxEventRepository : JpaRepository<OutboxEvent, String> {
 		""",
 	)
 	fun markSent(@Param("id") id: String, @Param("sentAt") sentAt: Instant): Int
+
+	/**
+	 * Bulk-deletes published rows whose sent_at is older than [cutoff]. Only SENT
+	 * rows are eligible, so unpublished work is never discarded.
+	 */
+	@Modifying
+	@Transactional
+	@Query(
+		"""
+		DELETE FROM OutboxEvent e
+		 WHERE e.status = com.sreejith.outbox.domain.OutboxStatus.SENT
+		   AND e.sentAt < :cutoff
+		""",
+	)
+	fun deleteSentBefore(@Param("cutoff") cutoff: Instant): Int
 }
