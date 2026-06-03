@@ -3,23 +3,26 @@ package com.sreejith.outbox.support
 import org.springframework.test.context.DynamicPropertyRegistry
 import org.springframework.test.context.DynamicPropertySource
 import org.testcontainers.containers.MySQLContainer
-import org.testcontainers.junit.jupiter.Container
-import org.testcontainers.junit.jupiter.Testcontainers
 
 /**
- * Base class for tests that need a real MySQL. One container is shared across
- * all subclasses (static), and Flyway migrates it on context startup.
+ * Base class for tests needing a real MySQL.
+ *
+ * Uses the Testcontainers *singleton container* pattern: the container is
+ * started once in a static initializer and never explicitly stopped, so it is
+ * reused across every test class and survives Spring's context cache (Ryuk
+ * reaps it at JVM exit). A @Testcontainers-managed @Container would be stopped
+ * after the first class finishes, breaking later classes that reuse a cached
+ * context still pointing at it.
  */
-@Testcontainers
 abstract class AbstractMySqlIntegrationTest {
 
 	companion object {
-		@Container
 		@JvmStatic
 		val mysql: MySQLContainer<*> = MySQLContainer("mysql:8.4")
 			.withDatabaseName("payments")
 			.withUsername("payments")
 			.withPassword("payments")
+			.also { it.start() }
 
 		@DynamicPropertySource
 		@JvmStatic

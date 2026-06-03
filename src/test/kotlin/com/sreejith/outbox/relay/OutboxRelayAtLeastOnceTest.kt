@@ -115,10 +115,13 @@ class OutboxRelayAtLeastOnceTest(
 			.isEqualTo(OutboxStatus.SENT)
 
 		// Two physical records for the one logical event — at-least-once in action.
+		// Scope to this test's key: the embedded broker is shared via the context
+		// cache, so the topic may carry records from other tests.
 		val records = KafkaTestUtils.getRecords(consumer, Duration.ofSeconds(10))
-			.records("payment-events").asSequence().toList()
+			.records("payment-events").asSequence()
+			.filter { it.key() == paymentId }
+			.toList()
 		assertThat(records).hasSize(2)
-		assertThat(records.map { it.key() }.toSet()).containsExactly(paymentId)
 		assertThat(records.map { it.value() }.toSet()).hasSize(1)
 	}
 }

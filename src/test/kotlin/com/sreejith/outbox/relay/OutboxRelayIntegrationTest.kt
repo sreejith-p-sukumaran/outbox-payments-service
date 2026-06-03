@@ -65,11 +65,14 @@ class OutboxRelayIntegrationTest(
 
 		relay.relayPendingEvents()
 
+		// Scope to this test's key: the embedded broker is shared via Spring's
+		// context cache, so the topic may carry records from other tests.
 		val records = KafkaTestUtils.getRecords(consumer, Duration.ofSeconds(10))
-		assertThat(records.count()).isEqualTo(1)
-		val record = records.records("payment-events").single()
-		assertThat(record.key()).isEqualTo(paymentId)
-		assertThat(record.value()).contains(paymentId)
+			.records("payment-events").asSequence()
+			.filter { it.key() == paymentId }
+			.toList()
+		assertThat(records).hasSize(1)
+		assertThat(records.single().value()).contains(paymentId)
 
 		val outbox = outboxEventRepository.findAll().single()
 		assertThat(outbox.status).isEqualTo(OutboxStatus.SENT)
